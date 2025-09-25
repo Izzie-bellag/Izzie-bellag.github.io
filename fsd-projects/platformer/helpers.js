@@ -1,23 +1,31 @@
 ///// DO NOT CHANGE ANYTHING IN THIS FILE /////
 
+
 ///////////////////////////////////////////////
 // Core functionality /////////////////////////
 ///////////////////////////////////////////////
+var gameWon = false;
+
+
 function registerSetup(setup) {
   setupGame = setup;
 }
 
+
 function main() {
   ctx.clearRect(0, 0, 1400, 750); //erase the screen so you can draw everything in it's most current position
+
 
   if (shouldDrawGrid) {
     drawGrid();
   }
 
+
   if (player.deadAndDeathAnimationDone) {
     deathOfPlayer();
     return;
   }
+
 
   drawPlatforms();
   drawProjectiles();
@@ -25,18 +33,38 @@ function main() {
   drawCollectables();
   playerFrictionAndGravity();
 
+
   player.x += player.speedX;
   player.y += player.speedY;
+
 
   collision(); //checks if the player will collide with something in this frame
   keyboardControlActions(); //keyboard controls.
   projectileCollision(); //checks if the player is getting hit by a projectile in the next frame
   collectablesCollide(); //checks if player has touched a collectable
 
+
+  // Win condition: supports both removal-from-array or flagging with .collected
+  if (
+    !gameWon &&
+    (collectables.length === 0 || collectables.every((c) => c.collected))
+  ) {
+    gameWon = true;
+  }
+
+
+  // Render win screen and halt the rest of the frame
+  if (gameWon) {
+    victoryScreen();
+    return;
+  }
+
+
   animate(); //this changes halle's picture to the next frame so it looks animated.
   // debug()                   //debugging values. Comment this out when not debugging.
   drawRobot(); //this actually displays the image of the robot.
 }
+
 
 function getJSON(url, callback) {
   var xhr = new XMLHttpRequest();
@@ -53,6 +81,7 @@ function getJSON(url, callback) {
   };
   xhr.send();
 }
+
 
 function JsonFunction(status, response) {
   /*
@@ -73,15 +102,17 @@ function JsonFunction(status, response) {
               yoffset: yoffset,
           }
           maxHeight: largest size the sprite can be
-          maxWidth: 
+          maxWidth:
       }
     */
   animationDetails = response;
 }
 
+
 ///////////////////////////////////////////////
 // Helper functions ///////////////////////////
 ///////////////////////////////////////////////
+
 
 function changeAnimationType() {
   if (currentAnimationType === animationTypes.frontDeath) {
@@ -122,12 +153,15 @@ function changeAnimationType() {
   }
 }
 
+
 function debug() {
   debugVar = true;
+
 
   // https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillText
   ctx.fillText("xs" + player.speedX + " x: " + player.x, 500, 200);
   ctx.fillText("ys" + player.speedY + " y: " + player.y, 500, 250);
+
 
   ctx.fillStyle = "black";
   ctx.fillText("on ground " + player.onGround, 150 + player.x, player.y - 20);
@@ -136,21 +170,26 @@ function debug() {
   ctx.fillText("offsetx" + offsetX, 150 + player.x, player.y + 40);
   ctx.fillText("offsetY" + offsetY, 150 + player.x, player.y + 60);
 
+
   ctx.fillStyle = "grey";
   ctx.fillRect(player.x, player.y, player.width, player.height);
+
 
   //debug showing collision
   ctx.fillStyle = "yellow";
   ctx.fillRect(500, 100, 50, 50);
 
+
   ctx.fillStyle = "green";
   ctx.fillRect(player.x, player.y, hitBoxWidth, hitBoxHeight);
+
 
   if (collision() !== undefined) {
     ctx.fillStyle = "yellow";
     ctx.fillRect(player.x, player.y - 50, 10, 10);
   }
 }
+
 
 function animate() {
   if (
@@ -203,10 +242,12 @@ function animate() {
       .hitDy * playerScale;
 }
 
+
 function drawRobot() {
   //ctx.drawImage(imageVaribale, sourceY, SourceX, sourceWidth, sourceHeight, canvasX, canvasY, finalWidth, finalHeight)
   //https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage
   //you only need the extra four source arguments if you want to display just a portion of the picture; if you want to show the whole picture you can just do drawImage(imageVar, canvasX, canvasY, width, height)
+
 
   //next section draws hallie. There is an if so that the image is reversed based on the direction of travel
   //there is also a hitDx and hitDy; those are offsets for the animation; enable debugger to see the true hitbox in green
@@ -214,6 +255,7 @@ function drawRobot() {
   if (player.deadAndDeathAnimationDone) {
     return; //return stops the function, we don't want to draw the robot after we die
   }
+
 
   if (player.facingRight) {
     ctx.drawImage(
@@ -246,6 +288,7 @@ function drawRobot() {
   }
 }
 
+
 function collision() {
   player.onGround = false; // Reset this every frame; if the player is actually on the ground, the resolveCollision function will set it to true
   var result = undefined;
@@ -269,6 +312,7 @@ function collision() {
   return result;
 }
 
+
 function resolveCollision(objx, objy, objw, objh) {
   //this is the return value
   let collisionDirection = "";
@@ -277,14 +321,17 @@ function resolveCollision(objx, objy, objw, objh) {
   let dx = player.x + hitBoxWidth / 2 - (objx + objw / 2);
   let dy = player.y + hitBoxHeight / 2 - (objy + objh / 2);
 
+
   //get half-widths of each item
   let halfWidth = hitBoxWidth / 2 + objw / 2;
   let halfHeight = hitBoxHeight / 2 + objh / 2;
+
 
   // if the x and y vector are less than the half width or half height,
   // then we must be inside the object, causing a collision
   let originx = halfWidth - Math.abs(dx);
   let originy = halfHeight - Math.abs(dy);
+
 
   if (debugVar) {
     //debug
@@ -297,6 +344,7 @@ function resolveCollision(objx, objy, objw, objh) {
     ctx.fillStyle = "rbga(252,186,3,.3)";
     ctx.fillRect(player.x, player.y, hitBoxWidth, hitBoxHeight);
   }
+
 
   if (originx >= originy) {
     if (dy > 0) {
@@ -325,14 +373,17 @@ function resolveCollision(objx, objy, objw, objh) {
     }
   }
 
+
   return collisionDirection;
 }
+
 
 function projectileCollision() {
   //checking if the player is dead
   if (currentAnimationType === animationTypes.frontDeath) {
     return;
   }
+
 
   for (var i = 0; i < projectiles.length; i++) {
     //this deletes any projectiles that go off the screen
@@ -345,9 +396,11 @@ function projectileCollision() {
       projectiles.splice(i, 1);
     }
 
+
     if (i === projectiles.length) {
       return;
     }
+
 
     //collision with the player
     if (
@@ -361,6 +414,7 @@ function projectileCollision() {
     }
   }
 }
+
 
 function deathOfPlayer() {
   ctx.fillStyle = "grey";
@@ -391,6 +445,18 @@ function deathOfPlayer() {
   }
 }
 
+
+function victoryScreen() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "white";
+  ctx.textAlign = "center";
+  ctx.font = "bold 72px Arial";
+  ctx.fillText("YOU WIN!", canvas.width / 2, canvas.height / 2);
+}
+
+
 function playerFrictionAndGravity() {
   //max speed limiter for ground
   if (player.speedX > maxSpeed) {
@@ -409,10 +475,12 @@ function playerFrictionAndGravity() {
     player.speedX = player.speedX + friction;
   }
 
+
   if (player.onGround === false) {
     player.speedY = player.speedY + gravity;
   }
 }
+
 
 function drawPlatforms() {
   for (var i = 0; i < platforms.length; i++) {
@@ -420,7 +488,8 @@ function drawPlatforms() {
     if (platforms[i].minX !== null && platforms[i].maxX !== null) {
       // Move platform based on speed and direction
       platforms[i].x += platforms[i].speed * platforms[i].direction;
-      
+
+
       // Reverse direction if platform reaches minX or maxX bounds
       if (platforms[i].x < platforms[i].minX) {
         platforms[i].x = platforms[i].minX;
@@ -430,7 +499,8 @@ function drawPlatforms() {
         platforms[i].direction *= -1; // Change direction to left
       }
     }
-    
+
+
     // Draw the platform
     const { color, x, y, width, height } = platforms[i];
     ctx.fillStyle = color;
@@ -438,9 +508,11 @@ function drawPlatforms() {
   }
 }
 
+
 function toggleGrid() {
   shouldDrawGrid = true;
 }
+
 
 function drawGrid() {
   // vertical grid lines
@@ -455,6 +527,7 @@ function drawGrid() {
     );
   }
 
+
   // horizontal grid lines
   for (let i = 100; i < canvas.height; i += 100) {
     createPlatform(canvas.width, i, -canvas.width + 45, -1);
@@ -467,6 +540,7 @@ function drawGrid() {
     );
   }
 }
+
 
 function drawProjectiles() {
   for (var i = 0; i < projectiles.length; i++) {
@@ -481,6 +555,7 @@ function drawProjectiles() {
     projectiles[i].y = projectiles[i].y + projectiles[i].speedY;
   }
 }
+
 
 function drawCannons() {
   for (var i = 0; i < cannons.length; i++) {
@@ -497,6 +572,7 @@ function drawCannons() {
       cannons[i].projectileCountdown = cannons[i].projectileCountdown + 1;
     }
 
+
     ctx.fillStyle = "grey";
     ctx.save(); //save the current translation of the screen.
     ctx.translate(cannons[i].x, cannons[i].y); //you are moving the top left of the screen to the pictures location, this is because you can't rotate the image, you have to rotate the whole page
@@ -507,6 +583,7 @@ function drawCannons() {
     ctx.restore(); //this unrotates the canvas so the canvas is straight, but now since you did that the picture looks rotated
   }
 }
+
 
 function drawCollectables() {
   for (var i = 0; i < collectables.length; i++) {
@@ -535,11 +612,13 @@ function drawCollectables() {
       ctx.globalAlpha = 1;
     }
 
+
     // Horizontal movement logic for collectables
     if (collectables[i].minX !== null && collectables[i].maxX !== null) {
       // Move collectable based on speed and direction
       collectables[i].x += collectables[i].speed * collectables[i].direction;
-      
+
+
       // Reverse direction if collectable reaches minX or maxX bounds
       if (collectables[i].x < collectables[i].minX) {
         collectables[i].x = collectables[i].minX;
@@ -550,9 +629,11 @@ function drawCollectables() {
       }
     }
 
+
     //gravity
     collectables[i].speedY = collectables[i].speedY + collectables[i].gravity;
     collectables[i].y = collectables[i].y + collectables[i].speedY;
+
 
     // Check for collision with platforms in order to bounce
     for (var j = 0; j < platforms.length; j++) {
@@ -570,6 +651,7 @@ function drawCollectables() {
   }
 }
 
+
 function collectablesCollide() {
   for (var i = 0; i < collectables.length; i++) {
     if (
@@ -583,19 +665,30 @@ function collectablesCollide() {
   }
 }
 
-function createPlatform(x, y, width, height, color = "grey", minX = null, maxX = null, speed = 1) {
-  platforms.push({ 
-    x, 
-    y, 
-    width, 
-    height, 
+
+function createPlatform(
+  x,
+  y,
+  width,
+  height,
+  color = "grey",
+  minX = null,
+  maxX = null,
+  speed = 1
+) {
+  platforms.push({
+    x,
+    y,
+    width,
+    height,
     color,
     minX,
     maxX,
     speed,
-    direction: 1 // 1 for right, -1 for left
+    direction: 1, // 1 for right, -1 for left
   });
 }
+
 
 function createCannon(
   wallLocation,
@@ -651,7 +744,17 @@ function createCannon(
   }
 }
 
-function createCollectable(type, x, y, gravity = 0, bounce = 1, minX = null, maxX = null, speed = 1) {
+
+function createCollectable(
+  type,
+  x,
+  y,
+  gravity = 0,
+  bounce = 1,
+  minX = null,
+  maxX = null,
+  speed = 1
+) {
   if (type !== "") {
     var image = document.createElement("img");
     image.src = collectableList[type].image;
@@ -668,16 +771,18 @@ function createCollectable(type, x, y, gravity = 0, bounce = 1, minX = null, max
       minX,
       maxX,
       speed,
-      direction: 1 // 1 for right, -1 for left
+      direction: 1, // 1 for right, -1 for left
     });
   }
 }
+
 
 function createProjectile(wallLocation, x, y, width, height) {
   //checking if the player is dead
   if (currentAnimationType === animationTypes.frontDeath) {
     return;
   }
+
 
   if (wallLocation === "top") {
     projectiles.push({
@@ -717,19 +822,23 @@ function createProjectile(wallLocation, x, y, width, height) {
     });
   }
 
+
   // putting this here instead of in every if
   projectiles[projectiles.length - 1].x -= (width - defaultProjectileWidth) / 2;
   projectiles[projectiles.length - 1].y -=
     (height - defaultProjectileHeight) / 2;
 }
 
+
 function keyboardControlActions() {
   keyPress.any = false; //keyboardHandler will set this to true if you press any key. Setting the variable to false here makes sure that key press dosen't stick around.
   //this is used for respawning; if you hit any key after you die this variable will be set to true and you will respawn.
 
+
   if (currentAnimationType === animationTypes.frontDeath) {
     return;
   }
+
 
   if (keyPress.left) {
     player.speedX -= walkAcceleration;
@@ -750,6 +859,7 @@ function keyboardControlActions() {
   }
 }
 
+
 function handleKeyDown(e) {
   keyPress.any = true;
   if (e.key === "ArrowUp" || e.key === "w") {
@@ -768,6 +878,7 @@ function handleKeyDown(e) {
     keyPress.space = true;
   }
 }
+
 
 function handleKeyUp(e) {
   if (e.key === "ArrowUp" || e.key === "w") {
@@ -790,6 +901,7 @@ function handleKeyUp(e) {
     keyPress.space = false;
   }
 }
+
 
 function loadJson() {
   getJSON("halle.json", JsonFunction); //runs this before the setup because of timing things
